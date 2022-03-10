@@ -1,6 +1,8 @@
 //TinyGSM 
 
-#include <iarduino_GSM.h>
+//#include <iarduino_GSM.h>
+//#include <softwareserial.h>
+void reSendDebug();
 
 #define PWR_A6 5
 #define RST_A6 4
@@ -15,8 +17,8 @@ void setup() {
   
   Serial1.begin(115200); //инициализируем второй uart (пин светодиода)
   Serial1.println("serial1_start");
-  Serial1.setDebugOutput(true);
-  Serial1.println("serial1_debug true");
+  //Serial1.setDebugOutput(true);
+  //Serial1.println("serial1_debug true");
 
 
   Serial1.println("Start GSM");
@@ -36,18 +38,63 @@ void setup() {
   // After delay, remove power from the enable pin on the A6
   delay(3000);
   digitalWrite(PWR_A6, LOW);
-
+  delay(3000);
+  
   //Serial1.println("wait GSM");
 
   Serial.println("AT");
-  if (Serial.available()){
-    Serial1.write(Serial.read());
-  }
-  
+  delay(3000);
+
+  reSendDebug();
 }
+
+//в строке curStr будем хранить текущую строку, которую передает нам плата
+String currStr = "";
+int updateTime = 0;
 
 // the loop function runs over and over again forever
 void loop() {
+
+  if (!Serial.available())
+    return;
+
+  // Считываем очередной символ с платы
+  char currSymb = Serial.read();
+  
+  if ('\r' == currSymb) {
+      // Получен символ перевода строки, это значит, что текущее
+      // сообщение от платы завершено и мы можем на него отреагировать.
+      // Если текущая строка - это RING, то значит, нам кто-то звонит
+      if (!currStr.compareTo("RING")) {
+          //кокетничаем 3 секунды, чтобы дать услышать звонящему гудок
+          delay(3000);
+          //посылаем команду на поднятие трубки
+          Serial.flush();
+          Serial.println("AT+CLCC");
+          delay (100);
+          String number; 
+          while (Serial.available() > 0){
+            number += (char)Serial.read();
+            if(Serial.available() <= 0){
+              Serial1.println(number);
+            }
+          }
+          delay (1000);
+          Serial.println("AT+CHUP");
+          delay (100);
+          Serial1.println ("End ring");
+
+          //Открытие домофона
+      }
+      currStr = "";
+  } else if (currSymb != '\n') {
+      // Дополняем текущую команду новым сиволом
+      // При этом игнорируем второй символ в последовательности переноса
+      // строки: \r\n
+      currStr += String(currSymb);
+  }
+    
+  /*
   digitalWrite(LED_BUILTIN, LOW);   // Turn the LED on (Note that LOW is the voltage level
   // but actually the LED is on; this is because
   // it is active low on the ESP-01)
@@ -56,4 +103,17 @@ void loop() {
   delay(2000);                      // Wait for two seconds (to demonstrate the active low LED)
   //Serial.println("loop");
   Serial1.println("loop");
+  */
+
+  
+}
+
+void reSendDebug(){
+    String str; 
+  while (Serial.available() > 0){
+    str += (char)Serial.read();
+    if(Serial.available() <= 0){
+      Serial1.println(str);
+    }
+  }
 }
