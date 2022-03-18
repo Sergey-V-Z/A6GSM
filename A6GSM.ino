@@ -1,11 +1,44 @@
 //TinyGSM 
+#if !defined(ESP8266)
+  #error This code is designed to run on ESP8266 and ESP8266-based boards! Please check your Tools->Board setting.
+#endif
+// These define's must be placed at the beginning before #include "TimerInterrupt_Generic.h"
+// _TIMERINTERRUPT_LOGLEVEL_ from 0 to 4
+// Don't define _TIMERINTERRUPT_LOGLEVEL_ > 0. Only for special ISR debugging only. Can hang the system.
+#define TIMER_INTERRUPT_DEBUG         1
+#define _TIMERINTERRUPT_LOGLEVEL_     0
 
-//#include <iarduino_GSM.h>
-//#include <softwareserial.h>
-void reSendDebug();
+#include "TimerInterrupt_Generic.h"
 
 #define PWR_A6 5
 #define RST_A6 4
+#define RELE 12
+#define TIMER_INTERVAL_MS        1000
+#define TIMER_RELE        5
+
+static bool started = false;
+ESP8266Timer ITimer;
+volatile uint32_t lastMillis = 0;
+uint32_t timeRele = 0;
+
+void IRAM_ATTR TimerHandler()
+{
+  static bool toggle = false;
+  
+//Serial1.println ("TimerHandler");
+  if (started)
+  {
+    timeRele++;
+    if(timeRele == TIMER_RELE){
+      started = false;
+      digitalWrite(RELE, LOW);
+      Serial1.println ("End RELE");
+      timeRele = 0;      
+    }
+
+  }
+}
+
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);     // Initialize the LED_BUILTIN pin as an output
   Serial.println("start");
@@ -25,6 +58,7 @@ void setup() {
   //включаем питание
   pinMode(PWR_A6, OUTPUT); //питание
   pinMode(RST_A6, OUTPUT); // ресет
+  pinMode(RELE, OUTPUT);
   digitalWrite(RST_A6, LOW); //Default settings for RST
   digitalWrite(PWR_A6, HIGH); // Default settings for PWR
 
@@ -46,6 +80,16 @@ void setup() {
   delay(3000);
 
   reSendDebug();
+
+  
+  // Interval in microsecs
+  if (ITimer.attachInterruptInterval(TIMER_INTERVAL_MS * 1000, TimerHandler))
+  {
+    lastMillis = millis();
+    Serial.print(F("Starting  ITimer OK, millis() = ")); Serial.println(lastMillis);
+  }
+  else
+    Serial.println(F("Can't set ITimer correctly. Select another freq. or interval"));
 }
 
 //в строке curStr будем хранить текущую строку, которую передает нам плата
@@ -69,7 +113,7 @@ void loop() {
           //кокетничаем 3 секунды, чтобы дать услышать звонящему гудок
           delay(3000);
           //посылаем команду на поднятие трубки
-          Serial.flush();
+          //Serial.flush();
           Serial.println("AT+CLCC");
           delay (100);
           String number; 
@@ -79,12 +123,19 @@ void loop() {
               Serial1.println(number);
             }
           }
+          
           delay (1000);
+          //Serial.flush();
           Serial.println("AT+CHUP");
           delay (100);
           Serial1.println ("End ring");
-
+ 
           //Открытие домофона
+          if(!started){
+            started = true;
+             digitalWrite(RELE, HIGH);
+          }
+         
       }
       currStr = "";
   } else if (currSymb != '\n') {
