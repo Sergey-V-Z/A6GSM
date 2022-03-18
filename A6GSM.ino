@@ -40,7 +40,7 @@ void IRAM_ATTR TimerHandler()
 }
 
 void setup() {
-  pinMode(LED_BUILTIN, OUTPUT);     // Initialize the LED_BUILTIN pin as an output
+  //pinMode(LED_BUILTIN, OUTPUT);     // Initialize the LED_BUILTIN pin as an output
   Serial.println("start");
   Serial.begin(115200);
   Serial.println("115200 set");
@@ -59,6 +59,7 @@ void setup() {
   pinMode(PWR_A6, OUTPUT); //питание
   pinMode(RST_A6, OUTPUT); // ресет
   pinMode(RELE, OUTPUT);
+  
   digitalWrite(RST_A6, LOW); //Default settings for RST
   digitalWrite(PWR_A6, HIGH); // Default settings for PWR
 
