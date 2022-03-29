@@ -50,7 +50,10 @@ void IRAM_ATTR TimerHandler()
     countOpen++;
     if (countOpen == OPEN_COUNT) {
       started = 0;
+      countOpen = 0;
+      timeRele = 0;
       digitalWrite(RELE, LOW);
+      Serial1.println ("End RELE ph2");
     }
   }
 }
@@ -140,15 +143,14 @@ void loop() {
           Serial1.println(number);
         }
       }
-
-      delay (1000);
-      //Serial.flush();
-      Serial.println("AT+CHUP");
-      delay (100);
-      Serial1.println ("End ring");
-
+      
       //Открытие домофона
       if (started == 0) {
+        delay (1000);
+        //Serial.flush();
+        Serial.println("AT+CHUP");
+        delay (100);
+        Serial1.println ("End ring");
         started = 1;
         digitalWrite(RELE, HIGH);
       }
